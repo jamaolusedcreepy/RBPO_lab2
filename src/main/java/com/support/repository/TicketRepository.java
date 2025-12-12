@@ -5,6 +5,7 @@ import com.support.domain.TicketStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -20,4 +21,14 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     List<Ticket> findByCategoryId(Long categoryId);
     Optional<Ticket> findByTitleAndUserId(String title, Long userId);
+
+    // Методы для бизнес-операций:
+    long countByAssignedAgentIdAndStatusNot(Long agentId, TicketStatus status);
+
+    @Query("SELECT t FROM Ticket t WHERE t.status = 'RESOLVED' AND t.updatedAt < :threshold")
+    List<Ticket> findResolvedBefore(LocalDateTime threshold);
+
+    List<Ticket> findByUserIdAndCategoryId(Long userId, Long categoryId);
+
+    List<Ticket> findByAssignedAgentIdAndCreatedAtBetween(Long agentId, LocalDateTime start, LocalDateTime end);
 }
