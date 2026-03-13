@@ -1,0 +1,513 @@
+{
+  "info": {
+    "name": "Support Ticket System",
+    "description": "Полная коллекция запросов для системы поддержки тикетов. Включает CRUD по всем сущностям и 5 бизнес-операций.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "SLA",
+      "item": [
+        {
+          "name": "Создать SLA",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/slas", "host": ["{{baseUrl}}"], "path": ["api", "slas"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Express\",\n  \"responseTimeHours\": 2,\n  \"resolutionTimeHours\": 8,\n  \"description\": \"Express SLA for VIP clients\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Получить все SLA",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/slas", "host": ["{{baseUrl}}"], "path": ["api", "slas"] }
+          }
+        },
+        {
+          "name": "Получить SLA по ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/slas/1", "host": ["{{baseUrl}}"], "path": ["api", "slas", "1"] }
+          }
+        },
+        {
+          "name": "Обновить SLA",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/slas/1", "host": ["{{baseUrl}}"], "path": ["api", "slas", "1"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Critical\",\n  \"responseTimeHours\": 1,\n  \"resolutionTimeHours\": 4,\n  \"description\": \"Critical issues — updated description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Удалить SLA",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/slas/5", "host": ["{{baseUrl}}"], "path": ["api", "slas", "5"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Создать категорию",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api", "categories"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Networking\",\n  \"description\": \"Network connectivity issues\",\n  \"sla\": { \"id\": 1 }\n}"
+            }
+          }
+        },
+        {
+          "name": "Получить все категории",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api", "categories"] }
+          }
+        },
+        {
+          "name": "Получить категорию по ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/categories/1", "host": ["{{baseUrl}}"], "path": ["api", "categories", "1"] }
+          }
+        },
+        {
+          "name": "Обновить категорию",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/categories/1", "host": ["{{baseUrl}}"], "path": ["api", "categories", "1"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Infrastructure\",\n  \"description\": \"Server, network, and hardware issues — updated\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Удалить категорию",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/categories/5", "host": ["{{baseUrl}}"], "path": ["api", "categories", "5"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Создать пользователя",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"David Brown\",\n  \"email\": \"david.brown@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Получить всех пользователей",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "Получить пользователя по ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/users/1", "host": ["{{baseUrl}}"], "path": ["api", "users", "1"] }
+          }
+        },
+        {
+          "name": "Обновить пользователя",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/users/1", "host": ["{{baseUrl}}"], "path": ["api", "users", "1"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Johnson Updated\",\n  \"email\": \"alice.updated@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Удалить пользователя",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/users/4", "host": ["{{baseUrl}}"], "path": ["api", "users", "4"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agents",
+      "item": [
+        {
+          "name": "Создать агента",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/agents", "host": ["{{baseUrl}}"], "path": ["api", "agents"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kate Morozova\",\n  \"email\": \"kate.morozova@support.com\",\n  \"isActive\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Получить всех агентов",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/agents", "host": ["{{baseUrl}}"], "path": ["api", "agents"] }
+          }
+        },
+        {
+          "name": "Получить активных агентов",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/agents/active", "host": ["{{baseUrl}}"], "path": ["api", "agents", "active"] }
+          }
+        },
+        {
+          "name": "Получить агента по ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/agents/1", "host": ["{{baseUrl}}"], "path": ["api", "agents", "1"] }
+          }
+        },
+        {
+          "name": "Обновить агента",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/agents/1", "host": ["{{baseUrl}}"], "path": ["api", "agents", "1"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Max Ivanov\",\n  \"email\": \"max.ivanov@support.com\",\n  \"isActive\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Удалить агента",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/agents/4", "host": ["{{baseUrl}}"], "path": ["api", "agents", "4"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "Создать тикет",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Email service is down\",\n  \"description\": \"Corporate email stopped working for all users.\",\n  \"user\": { \"id\": 1 },\n  \"category\": { \"id\": 1 }\n}"
+            }
+          }
+        },
+        {
+          "name": "Получить все тикеты",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] }
+          }
+        },
+        {
+          "name": "Получить тикет по ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tickets/1", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "1"] }
+          }
+        },
+        {
+          "name": "Получить тикеты пользователя",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tickets/user/1", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "user", "1"] }
+          }
+        },
+        {
+          "name": "Получить тикеты агента",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tickets/agent/1", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "agent", "1"] }
+          }
+        },
+        {
+          "name": "Получить просроченные тикеты",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tickets/overdue", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "overdue"] }
+          }
+        },
+        {
+          "name": "Обновить тикет",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/tickets/1", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "1"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Server is down — URGENT\",\n  \"description\": \"Production server is not responding. All services affected.\",\n  \"category\": { \"id\": 1 }\n}"
+            }
+          }
+        },
+        {
+          "name": "Назначить агента на тикет",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/4/assign?agentId=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "4", "assign"],
+              "query": [{ "key": "agentId", "value": "2" }]
+            }
+          }
+        },
+        {
+          "name": "Изменить статус тикета (OPEN → IN_PROGRESS)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/4/status?newStatus=IN_PROGRESS",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "4", "status"],
+              "query": [{ "key": "newStatus", "value": "IN_PROGRESS" }]
+            }
+          }
+        },
+        {
+          "name": "Изменить статус тикета (IN_PROGRESS → RESOLVED)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/1/status?newStatus=RESOLVED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "1", "status"],
+              "query": [{ "key": "newStatus", "value": "RESOLVED" }]
+            }
+          }
+        },
+        {
+          "name": "Закрыть тикет с решением",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/5/close?solution=Certificate renewed via Let's Encrypt. HTTPS restored.",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "5", "close"],
+              "query": [{ "key": "solution", "value": "Certificate renewed via Let's Encrypt. HTTPS restored." }]
+            }
+          }
+        },
+        {
+          "name": "Удалить тикет",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/tickets/9", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "9"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Бизнес-операции",
+      "item": [
+        {
+          "name": "1. Авто-назначение тикета на наименее загруженного агента",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/4/auto-assign",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "4", "auto-assign"]
+            },
+            "description": "Система находит активного агента с наименьшим числом открытых тикетов и назначает его. Если тикет в статусе OPEN — переводит в IN_PROGRESS.\n\nЗатрагивает: Ticket + Agent. Транзакция."
+          }
+        },
+        {
+          "name": "2. Эскалация тикета (смена категории + пересчёт SLA)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/4/escalate?categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "4", "escalate"],
+              "query": [{ "key": "categoryId", "value": "1" }]
+            },
+            "description": "Меняет категорию тикета и автоматически пересчитывает дедлайны ответа и решения по SLA новой категории.\n\nЗатрагивает: Ticket + Category + SLA. Транзакция."
+          }
+        },
+        {
+          "name": "3. Деактивация агента с переназначением тикетов",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/agents/3/deactivate?reassignToAgentId=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "agents", "3", "deactivate"],
+              "query": [{ "key": "reassignToAgentId", "value": "2" }]
+            },
+            "description": "Деактивирует агента (id=3) и переназначает все его активные тикеты (OPEN/IN_PROGRESS/ON_HOLD/REOPENED) на другого агента (id=2).\n\nЗатрагивает: Agent + Ticket. Транзакция."
+          }
+        },
+        {
+          "name": "4. Статистика по категориям (тикеты + SLA)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "categories"]
+            },
+            "description": "Возвращает по каждой категории: название, параметры SLA (часы ответа/решения), общее число тикетов и разбивку по статусам.\n\nЗатрагивает: Category + Ticket + SLA."
+          }
+        },
+        {
+          "name": "4b. Нагрузка на агентов (отчёт)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/agents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "agents"]
+            },
+            "description": "Возвращает по каждому агенту: число активных, решённых и закрытых тикетов.\n\nЗатрагивает: Agent + Ticket."
+          }
+        },
+        {
+          "name": "5. Повторное открытие закрытого/отменённого тикета",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/8/reopen?assignToAgentId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "8", "reopen"],
+              "query": [{ "key": "assignToAgentId", "value": "1", "description": "Необязательный параметр" }]
+            },
+            "description": "Переводит тикет из статуса CLOSED или CANCELLED обратно в REOPENED. Пересчитывает SLA-дедлайны от текущего момента. Опционально назначает агента.\n\nЗатрагивает: Ticket + Category + SLA + Agent. Транзакция."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Полный сценарий",
+      "item": [
+        {
+          "name": "Шаг 1 — Создать тикет",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"VPN не подключается\",\n  \"description\": \"Сотрудники не могут подключиться к корпоративному VPN после обновления.\",\n  \"user\": { \"id\": 2 },\n  \"category\": { \"id\": 3 }\n}"
+            },
+            "description": "Создаём новый тикет. Запомните id из ответа и замените в следующих шагах."
+          }
+        },
+        {
+          "name": "Шаг 2 — Авто-назначить на агента",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/9/auto-assign",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "9", "auto-assign"]
+            },
+            "description": "Замените 9 на id тикета из шага 1."
+          }
+        },
+        {
+          "name": "Шаг 3 — Эскалировать в категорию Infrastructure",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/9/escalate?categoryId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "9", "escalate"],
+              "query": [{ "key": "categoryId", "value": "1" }]
+            },
+            "description": "Меняем категорию на Infrastructure (Critical SLA). Дедлайны пересчитываются автоматически."
+          }
+        },
+        {
+          "name": "Шаг 4 — Перевести в RESOLVED",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/9/status?newStatus=RESOLVED",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "9", "status"],
+              "query": [{ "key": "newStatus", "value": "RESOLVED" }]
+            }
+          }
+        },
+        {
+          "name": "Шаг 5 — Закрыть с описанием решения",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/9/close?solution=Обновлён VPN-клиент до версии 5.2. Подключение восстановлено.",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "9", "close"],
+              "query": [{ "key": "solution", "value": "Обновлён VPN-клиент до версии 5.2. Подключение восстановлено." }]
+            }
+          }
+        },
+        {
+          "name": "Шаг 6 — Повторно открыть тикет",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/api/tickets/9/reopen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tickets", "9", "reopen"]
+            },
+            "description": "Проблема вернулась — открываем снова. SLA-дедлайны пересчитываются от текущего времени."
+          }
+        },
+        {
+          "name": "Шаг 7 — Проверить статистику по категориям",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "categories"]
+            },
+            "description": "Видим итоговое распределение тикетов по категориям и статусам."
+          }
+        }
+      ]
+    }
+  ]
+}
