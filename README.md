@@ -315,6 +315,132 @@ ORDER BY created_at DESC;
 
 ---
 
+## TLS / HTTPS
+
+### Структура цепочки сертификатов
+
+```
+Root CA  (STS-RootCA, самоподписанный, 10 лет)
+  └── Intermediate CA  (STS-IntermediateCA, подписан Root CA, 5 лет)
+        └── Server cert  (CN=localhost, подписан Intermediate CA, 1 год)
+```
+
+Все сертификаты содержат `OU=Student-<номер_студенческого_билета>`.
+
+### Генерация сертификатов
+
+```bash
+# Укажите свой номер студенческого билета
+export STUDENT_ID=12345678
+export KEYSTORE_PASSWORD=yourStrongPassword
+
+bash generate-certs.sh
+```
+
+Созданные файлы (в директории `certs/` — исключены из git):
+| Файл | Описание |
+|------|----------|
+| `certs/sts-root-ca.crt` | Корневой CA — добавить в доверенные |
+| `certs/sts-intermediate-ca.crt` | Промежуточный CA |
+| `certs/sts-server.crt` | Серверный сертификат |
+| `certs/sts-chain.crt` | Полная цепочка |
+| `src/main/resources/keystore.p12` | PKCS12 keystore для Spring Boot (не в git) |
+
+### Запуск с HTTPS
+
+```bash
+export SSL_ENABLED=true
+export SSL_KEY_STORE_PASSWORD=yourStrongPassword
+export SERVER_PORT=8443
+mvn spring-boot:run
+```
+
+Приложение будет доступно по адресу: `https://localhost:8443`
+
+### Добавление Root CA в доверенные
+
+**Windows** (через certlm.msc):
+1. Win+R → `certlm.msc`
+2. Trusted Root Certification Authorities → All Tasks → Import
+3. Выбрать `certs/sts-root-ca.crt`
+
+**macOS:**
+```bash
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain certs/sts-root-ca.crt
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo cp certs/sts-root-ca.crt /usr/local/share/ca-certificates/sts-root-ca.crt
+sudo update-ca-certificates
+```
+
+### Переменные окружения для TLS
+
+| Переменная | По умолчанию | Описание |
+|------------|-------------|----------|
+| `SSL_ENABLED` | `false` | Включить HTTPS |
+| `SSL_KEY_STORE_PATH` | `classpath:keystore.p12` | Путь к keystore |
+| `SSL_KEY_STORE_PASSWORD` | `changeit` | Пароль keystore |
+| `SERVER_PORT` | `8080` | Порт (8443 для HTTPS) |
+
+> Keystore и приватные ключи **никогда** не коммитятся в репозиторий — добавлены в `.gitignore`.
+
+### Настройка Postman для HTTPS
+
+В Postman: **Settings → General → SSL certificate verification → OFF**
+(для self-signed сертификатов в dev-среде)
+
+Или добавьте `certs/sts-root-ca.crt` как доверенный CA:
+**Settings → Certificates → CA Certificates → Add**
+
+В коллекции переменная `baseUrl` уже установлена на `https://localhost:8443`. Для HTTP замените на `http://localhost:8080`.
+
+---
+
+## CI/CD (GitHub Actions)
+
+### Пайплайн
+
+Файл: `.github/workflows/ci.yml`
+
+При каждом push/PR в ветку `main` запускается:
+
+| Шаг | Описание |
+|-----|----------|
+| Checkout | Клонирование репозитория |
+| Set up JDK 21 | Установка Java |
+| Restore keystore | Декодирование keystore из GitHub Secret |
+| Compile | `mvn compile` |
+| Test | `mvn test` (с PostgreSQL service) |
+| Package | `mvn package -DskipTests` |
+| Upload artifact | JAR загружается в GitHub Artifacts (хранится 30 дней) |
+
+### GitHub Secrets
+
+Перейдите в **Settings → Secrets and variables → Actions** репозитория и добавьте:
+
+| Secret | Описание |
+|--------|----------|
+| `KEYSTORE_BASE64` | Base64-кодированный keystore.p12 |
+| `KEYSTORE_PASSWORD` | Пароль от keystore |
+
+Получить base64 от keystore:
+```bash
+# Linux/macOS
+base64 -w 0 src/main/resources/keystore.p12
+
+# Windows (PowerShell)
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("src\main\resources\keystore.p12"))
+```
+
+Скопируйте вывод и вставьте как значение секрета `KEYSTORE_BASE64`.
+
+> Приватные ключи, keystore и сертификаты **не хранятся в репозитории**. Только в GitHub Secrets.
+
+---
+
 ## Коллекция запросов
 
 Все запросы (CRUD + бизнес-операции + JWT-сценарий) находятся в файле `postman_collection.json`.

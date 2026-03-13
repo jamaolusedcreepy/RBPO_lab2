@@ -1,11 +1,16 @@
 {
   "info": {
     "name": "Support Ticket System",
-    "description": "Полная коллекция запросов. Аутентификация через JWT (Bearer token). Basic Auth удалён.",
+    "description": "Полная коллекция запросов. Аутентификация через JWT (Bearer token).\nHTTP:  http://localhost:8080\nHTTPS: https://localhost:8443 (после включения TLS через generate-certs.sh)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",          "value": "http://localhost:8080", "type": "string" },
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:8443",
+      "type": "string",
+      "description": "Для HTTP используйте http://localhost:8080. Для HTTPS — https://localhost:8443 (после генерации сертификата)"
+    },
     { "key": "accessToken",      "value": "", "type": "string", "description": "Заполняется автоматически после /auth/login или /auth/refresh" },
     { "key": "refreshToken",     "value": "", "type": "string", "description": "Заполняется автоматически после /auth/login или /auth/refresh" },
     { "key": "userAccessToken",  "value": "", "type": "string", "description": "Токен для тестов роли USER" },

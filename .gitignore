@@ -34,3 +34,11 @@ build/
 
 ### Environment secrets ###
 .env
+
+### TLS / Certificates — НИКОГДА не коммитить! ###
+*.p12
+*.jks
+*.key
+*.csr
+*.srl
+certs/
