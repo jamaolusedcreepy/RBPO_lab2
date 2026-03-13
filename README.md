@@ -126,43 +126,61 @@ CANCELLED  ON_HOLD      REOPENED
 REOPENED  IN_PROGRESS  IN_PROGRESS
 ```
 
-## Безопасность (Spring Security)
+## Безопасность (Spring Security + JWT)
+
+### Таблицы безопасности
+
+| Таблица        | Описание |
+|----------------|----------|
+| `app_users`    | Учётные записи для входа: username, BCrypt-пароль, роль. |
+| `user_sessions`| Refresh-сессии: jti (UUID), SHA-256 хэш токена, статус, сроки. |
 
 ### Роли
 
 | Роль         | Описание |
 |--------------|----------|
-| `ROLE_USER`  | Обычный пользователь. Создаёт тикеты, просматривает свои тикеты, категории и SLA. |
+| `ROLE_USER`  | Обычный пользователь. Создаёт тикеты, просматривает тикеты/категории/SLA. |
 | `ROLE_AGENT` | Агент поддержки. Управляет тикетами, просматривает пользователей и отчёты. |
 | `ROLE_ADMIN` | Полный доступ ко всем операциям. |
 
 ### Матрица доступа
 
-| Эндпоинт | USER | AGENT | ADMIN |
-|----------|------|-------|-------|
-| `POST /api/auth/register` | ✅ | ✅ | ✅ |
-| `GET /api/slas/**` | ❌ | ✅ | ✅ |
-| `POST/PUT/DELETE /api/slas/**` | ❌ | ❌ | ✅ |
-| `GET /api/categories/**` | ❌ | ✅ | ✅ |
-| `POST/PUT/DELETE /api/categories/**` | ❌ | ❌ | ✅ |
-| `GET /api/users/**` | ❌ | ✅ | ✅ |
-| `POST/PUT/DELETE /api/users/**` | ❌ | ❌ | ✅ |
-| `GET /api/agents/**` | ❌ | ✅ | ✅ |
-| `POST/PUT/DELETE /api/agents/**` | ❌ | ❌ | ✅ |
-| `POST /api/tickets` | ✅ | ❌ | ✅ |
-| `GET /api/tickets/**` | ✅ | ✅ | ✅ |
-| `PUT /api/tickets/**` | ❌ | ✅ | ✅ |
-| `DELETE /api/tickets/**` | ❌ | ❌ | ✅ |
-| `GET /api/reports/**` | ❌ | ✅ | ✅ |
+| Эндпоинт | Без токена | USER | AGENT | ADMIN |
+|----------|-----------|------|-------|-------|
+| `POST /api/auth/register` | ✅ | ✅ | ✅ | ✅ |
+| `POST /api/auth/login`    | ✅ | ✅ | ✅ | ✅ |
+| `POST /api/auth/refresh`  | ✅ | ✅ | ✅ | ✅ |
+| `GET /api/slas/**` | ❌ | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/slas/**` | ❌ | ❌ | ❌ | ✅ |
+| `GET /api/categories/**` | ❌ | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/categories/**` | ❌ | ❌ | ❌ | ✅ |
+| `GET /api/users/**` | ❌ | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/users/**` | ❌ | ❌ | ❌ | ✅ |
+| `GET /api/agents/**` | ❌ | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/agents/**` | ❌ | ❌ | ❌ | ✅ |
+| `POST /api/tickets` | ❌ | ✅ | ❌ | ✅ |
+| `GET /api/tickets/**` | ❌ | ✅ | ✅ | ✅ |
+| `PUT /api/tickets/**` | ❌ | ❌ | ✅ | ✅ |
+| `DELETE /api/tickets/**` | ❌ | ❌ | ❌ | ✅ |
+| `GET /api/reports/**` | ❌ | ❌ | ✅ | ✅ |
 
 ### Аутентификация — Basic Auth
 
-Все запросы (кроме регистрации) требуют заголовка:
+Поддерживается для обратной совместимости. Все защищённые запросы могут использовать заголовок:
 ```
 Authorization: Basic <base64(username:password)>
 ```
 
 В Postman: вкладка **Authorization → Basic Auth** → введите username и password.
+
+### Аутентификация — JWT Bearer
+
+Рекомендуемый способ. Все защищённые запросы требуют заголовка:
+```
+Authorization: Bearer <accessToken>
+```
+
+В Postman: вкладка **Authorization → Bearer Token** → вставьте `accessToken`.
 
 ### Регистрация пользователей
 
@@ -195,7 +213,7 @@ Content-Type: application/json
 
 ### CSRF-токены
 
-Spring Security защищает изменяющие запросы (POST/PUT/DELETE) CSRF-токеном.
+Spring Security поддерживает CSRF-защиту (актуально при использовании Basic Auth с сессиями).
 
 **Шаг 1.** Сделайте любой GET-запрос с Basic Auth — в ответе придёт cookie `XSRF-TOKEN`.
 
@@ -211,14 +229,99 @@ pm.environment.set('xsrf_token', token);
 ```
 Затем в заголовках других запросов: `X-XSRF-TOKEN: {{xsrf_token}}`.
 
+> При использовании JWT Bearer CSRF не требуется — запросы stateless.
+
 ### Хранение паролей
 
 Пароли хранятся в таблице `app_users` в виде BCrypt-хэша. В коде и скриптах паролей нет.
+
+### Эндпоинты аутентификации
+
+#### Регистрация
+```
+POST /api/auth/register
+```
+```json
+{ "username": "admin", "password": "Admin123!", "role": "ROLE_ADMIN" }
+```
+
+#### Вход
+```
+POST /api/auth/login
+```
+```json
+{ "username": "admin", "password": "Admin123!" }
+```
+Ответ:
+```json
+{
+  "accessToken":  "eyJ...",
+  "refreshToken": "eyJ...",
+  "tokenType":    "Bearer"
+}
+```
+
+#### Обновление пары токенов
+```
+POST /api/auth/refresh
+```
+```json
+{ "refreshToken": "eyJ..." }
+```
+Возвращает новую пару. Старый refresh-токен становится недействительным (token rotation).
+
+### Токены
+
+| Тип           | Время жизни | Назначение |
+|---------------|-------------|------------|
+| Access token  | 15 минут    | Доступ к API-эндпоинтам |
+| Refresh token | 7 дней      | Получение новой пары токенов |
+
+**Payload access-токена:** `sub` (username), `role`, `type=access`, `iat`, `exp`
+
+**Payload refresh-токена:** `sub` (username), `type=refresh`, `jti` (UUID сессии), `iat`, `exp`
+
+### Управление сессиями
+
+Каждый refresh-токен привязан к записи в таблице `user_sessions`.
+
+| Статус    | Описание |
+|-----------|----------|
+| `ACTIVE`  | Сессия активна, refresh-токен можно использовать |
+| `REVOKED` | Токен использован — сессия отозвана (token rotation) |
+| `EXPIRED` | Срок сессии истёк |
+
+Повторное использование отозванного refresh-токена возвращает `401`.
+
+Для контроля сессий в БД:
+```sql
+SELECT jti, status, created_at, expires_at, last_used_at
+FROM user_sessions
+ORDER BY created_at DESC;
+```
+
+### Требования к паролю
+
+- Минимум **8 символов**
+- Хотя бы одна **заглавная буква** (A–Z)
+- Хотя бы одна **цифра** (0–9)
+- Хотя бы один **спецсимвол** (`!@#$%^&*` и др.)
+
+### Хранение данных
+
+- Пароли — BCrypt-хэш в таблице `app_users`
+- Refresh-токены — SHA-256 хэш в таблице `user_sessions`
+- В коде и скриптах никаких паролей и токенов нет
 
 ---
 
 ## Коллекция запросов
 
-Все запросы (CRUD + бизнес-операции) с примерами тел и полным сценарием находятся в файле `postman_collection.json`.
+Все запросы (CRUD + бизнес-операции + JWT-сценарий) находятся в файле `postman_collection.json`.
 
 Импорт в Postman: **File → Import → выбрать `postman_collection.json`**.
+
+**Быстрый старт:**
+1. Выполни `POST /api/auth/register` — создай пользователей
+2. Выполни `POST /api/auth/login` — токены сохранятся в переменные коллекции автоматически
+3. Все остальные запросы используют `Bearer {{accessToken}}` из переменных

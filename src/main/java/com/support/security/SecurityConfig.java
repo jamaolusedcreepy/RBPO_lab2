@@ -5,39 +5,43 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final AppUserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(AppUserDetailsService userDetailsService) {
+    public SecurityConfig(AppUserDetailsService userDetailsService,
+                          JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                // Регистрация не требует CSRF-токена (первый запрос)
-                .ignoringRequestMatchers("/api/auth/register")
-            )
+            // JWT — stateless, CSRF не нужен
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
             .authorizeHttpRequests(auth -> auth
 
                 // --- Публичные ---
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
 
                 // --- SLA: просмотр — любой авторизованный, управление — только ADMIN ---
                 .requestMatchers(HttpMethod.GET, "/api/slas/**").authenticated()
@@ -47,7 +51,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/categories/**").authenticated()
                 .requestMatchers("/api/categories/**").hasRole("ADMIN")
 
-                // --- Пользователи (domain): просмотр — ADMIN/AGENT, управление — ADMIN ---
+                // --- Пользователи: просмотр — ADMIN/AGENT, управление — ADMIN ---
                 .requestMatchers(HttpMethod.GET, "/api/users/**").hasAnyRole("ADMIN", "AGENT")
                 .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/users/**").hasRole("ADMIN")
@@ -58,21 +62,19 @@ public class SecurityConfig {
                 .requestMatchers("/api/agents/**").hasRole("ADMIN")
 
                 // --- Тикеты ---
-                // Создать тикет — USER или ADMIN
                 .requestMatchers(HttpMethod.POST, "/api/tickets").hasAnyRole("ADMIN", "USER")
-                // Просматривать — все авторизованные
                 .requestMatchers(HttpMethod.GET, "/api/tickets/**").authenticated()
-                // Изменять — AGENT или ADMIN
                 .requestMatchers(HttpMethod.PUT, "/api/tickets/**").hasAnyRole("ADMIN", "AGENT")
-                // Удалять — только ADMIN
                 .requestMatchers(HttpMethod.DELETE, "/api/tickets/**").hasRole("ADMIN")
 
-                // --- Отчёты и бизнес-операции — AGENT или ADMIN ---
+                // --- Отчёты и бизнес-операции ---
                 .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "AGENT")
 
                 .anyRequest().authenticated()
             )
-            .httpBasic(Customizer.withDefaults())
+
+            // JWT-фильтр запускается до стандартной аутентификации
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .authenticationProvider(authenticationProvider());
 
         return http.build();
@@ -91,7 +93,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Готовая почва для будущей JWT-аутентификации
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
