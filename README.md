@@ -126,6 +126,97 @@ CANCELLED  ON_HOLD      REOPENED
 REOPENED  IN_PROGRESS  IN_PROGRESS
 ```
 
+## Безопасность (Spring Security)
+
+### Роли
+
+| Роль         | Описание |
+|--------------|----------|
+| `ROLE_USER`  | Обычный пользователь. Создаёт тикеты, просматривает свои тикеты, категории и SLA. |
+| `ROLE_AGENT` | Агент поддержки. Управляет тикетами, просматривает пользователей и отчёты. |
+| `ROLE_ADMIN` | Полный доступ ко всем операциям. |
+
+### Матрица доступа
+
+| Эндпоинт | USER | AGENT | ADMIN |
+|----------|------|-------|-------|
+| `POST /api/auth/register` | ✅ | ✅ | ✅ |
+| `GET /api/slas/**` | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/slas/**` | ❌ | ❌ | ✅ |
+| `GET /api/categories/**` | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/categories/**` | ❌ | ❌ | ✅ |
+| `GET /api/users/**` | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/users/**` | ❌ | ❌ | ✅ |
+| `GET /api/agents/**` | ❌ | ✅ | ✅ |
+| `POST/PUT/DELETE /api/agents/**` | ❌ | ❌ | ✅ |
+| `POST /api/tickets` | ✅ | ❌ | ✅ |
+| `GET /api/tickets/**` | ✅ | ✅ | ✅ |
+| `PUT /api/tickets/**` | ❌ | ✅ | ✅ |
+| `DELETE /api/tickets/**` | ❌ | ❌ | ✅ |
+| `GET /api/reports/**` | ❌ | ✅ | ✅ |
+
+### Аутентификация — Basic Auth
+
+Все запросы (кроме регистрации) требуют заголовка:
+```
+Authorization: Basic <base64(username:password)>
+```
+
+В Postman: вкладка **Authorization → Basic Auth** → введите username и password.
+
+### Регистрация пользователей
+
+```
+POST /api/auth/register
+Content-Type: application/json
+```
+
+```json
+{
+  "username": "admin",
+  "password": "Admin123!",
+  "role": "ROLE_ADMIN"
+}
+```
+
+Доступные роли: `ROLE_USER`, `ROLE_AGENT`, `ROLE_ADMIN`.
+
+#### Требования к паролю
+
+- Минимум **8 символов**
+- Хотя бы одна **заглавная буква** (A–Z)
+- Хотя бы одна **цифра** (0–9)
+- Хотя бы один **спецсимвол** (`!@#$%^&*` и др.)
+
+Примеры плохих паролей → ответ `400 Bad Request`:
+- `simple` — слишком короткий
+- `password1` — нет заглавной и спецсимвола
+- `Password1` — нет спецсимвола
+
+### CSRF-токены
+
+Spring Security защищает изменяющие запросы (POST/PUT/DELETE) CSRF-токеном.
+
+**Шаг 1.** Сделайте любой GET-запрос с Basic Auth — в ответе придёт cookie `XSRF-TOKEN`.
+
+**Шаг 2.** Для каждого POST/PUT/DELETE добавьте заголовок:
+```
+X-XSRF-TOKEN: <значение из cookie XSRF-TOKEN>
+```
+
+В Postman это можно автоматизировать скриптом в **Tests** вкладке GET-запроса:
+```javascript
+const token = pm.cookies.get('XSRF-TOKEN');
+pm.environment.set('xsrf_token', token);
+```
+Затем в заголовках других запросов: `X-XSRF-TOKEN: {{xsrf_token}}`.
+
+### Хранение паролей
+
+Пароли хранятся в таблице `app_users` в виде BCrypt-хэша. В коде и скриптах паролей нет.
+
+---
+
 ## Коллекция запросов
 
 Все запросы (CRUD + бизнес-операции) с примерами тел и полным сценарием находятся в файле `postman_collection.json`.

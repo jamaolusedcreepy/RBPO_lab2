@@ -1,32 +1,102 @@
 {
   "info": {
     "name": "Support Ticket System",
-    "description": "Полная коллекция запросов для системы поддержки тикетов. Включает CRUD по всем сущностям и 5 бизнес-операций.",
+    "description": "Полная коллекция запросов для системы поддержки тикетов. Basic Auth, CSRF, роли, регистрация.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
+    { "key": "baseUrl",     "value": "http://localhost:8080", "type": "string" },
+    { "key": "username",    "value": "admin",                 "type": "string", "description": "Текущий пользователь для Basic Auth" },
+    { "key": "password",    "value": "Admin123!",             "type": "string" },
+    { "key": "xsrf_token",  "value": "",                      "type": "string", "description": "Заполняется автоматически после любого GET-запроса" }
+  ],
+  "auth": {
+    "type": "basic",
+    "basic": [
+      { "key": "username", "value": "{{username}}", "type": "string" },
+      { "key": "password", "value": "{{password}}", "type": "string" }
+    ]
+  },
+  "event": [
     {
-      "key": "baseUrl",
-      "value": "http://localhost:8080",
-      "type": "string"
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Автоматически сохраняем CSRF-токен из cookie после каждого запроса",
+          "const token = pm.cookies.get('XSRF-TOKEN');",
+          "if (token) { pm.collectionVariables.set('xsrf_token', token); }"
+        ]
+      }
     }
   ],
   "item": [
     {
-      "name": "SLA",
+      "name": "Auth (Регистрация)",
+      "description": "Регистрация не требует авторизации и CSRF-токена. Пароль: мин. 8 символов, заглавная буква, цифра, спецсимвол.",
       "item": [
         {
-          "name": "Создать SLA",
+          "name": "Зарегистрировать ADMIN",
           "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/slas", "host": ["{{baseUrl}}"], "path": ["api", "slas"] },
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Express\",\n  \"responseTimeHours\": 2,\n  \"resolutionTimeHours\": 8,\n  \"description\": \"Express SLA for VIP clients\"\n}"
-            }
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\",\n  \"role\": \"ROLE_ADMIN\"\n}"
+            },
+            "description": "Создаёт пользователя с полным доступом. Пароль хранится в виде BCrypt-хэша."
           }
         },
+        {
+          "name": "Зарегистрировать AGENT",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"agent1\",\n  \"password\": \"Agent123!\",\n  \"role\": \"ROLE_AGENT\"\n}"
+            },
+            "description": "Агент может управлять тикетами и просматривать отчёты."
+          }
+        },
+        {
+          "name": "Зарегистрировать USER",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"user1\",\n  \"password\": \"User1234!\",\n  \"role\": \"ROLE_USER\"\n}"
+            },
+            "description": "Обычный пользователь — может создавать тикеты и просматривать их."
+          }
+        },
+        {
+          "name": "Слабый пароль → 400",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"weakuser\",\n  \"password\": \"simple\"\n}"
+            },
+            "description": "Ожидаем 400 Bad Request с описанием ошибки валидации пароля."
+          }
+        }
+      ]
+    },
+    {
+      "name": "SLA",
+      "description": "GET — доступен AGENT и ADMIN. POST/PUT/DELETE — только ADMIN.",
+      "item": [
         {
           "name": "Получить все SLA",
           "request": {
@@ -42,14 +112,32 @@
           }
         },
         {
+          "name": "Создать SLA",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/slas", "host": ["{{baseUrl}}"], "path": ["api", "slas"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Express\",\n  \"responseTimeHours\": 2,\n  \"resolutionTimeHours\": 8,\n  \"description\": \"Express SLA for VIP clients\"\n}"
+            }
+          }
+        },
+        {
           "name": "Обновить SLA",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
             "url": { "raw": "{{baseUrl}}/api/slas/1", "host": ["{{baseUrl}}"], "path": ["api", "slas", "1"] },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Critical\",\n  \"responseTimeHours\": 1,\n  \"resolutionTimeHours\": 4,\n  \"description\": \"Critical issues — updated description\"\n}"
+              "raw": "{\n  \"name\": \"Critical\",\n  \"responseTimeHours\": 1,\n  \"resolutionTimeHours\": 4,\n  \"description\": \"Critical issues — updated\"\n}"
             }
           }
         },
@@ -57,6 +145,7 @@
           "name": "Удалить SLA",
           "request": {
             "method": "DELETE",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": { "raw": "{{baseUrl}}/api/slas/5", "host": ["{{baseUrl}}"], "path": ["api", "slas", "5"] }
           }
         }
@@ -64,19 +153,8 @@
     },
     {
       "name": "Categories",
+      "description": "GET — доступен AGENT и ADMIN. POST/PUT/DELETE — только ADMIN.",
       "item": [
-        {
-          "name": "Создать категорию",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api", "categories"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Networking\",\n  \"description\": \"Network connectivity issues\",\n  \"sla\": { \"id\": 1 }\n}"
-            }
-          }
-        },
         {
           "name": "Получить все категории",
           "request": {
@@ -92,10 +170,28 @@
           }
         },
         {
+          "name": "Создать категорию",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api", "categories"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Networking\",\n  \"description\": \"Network connectivity issues\",\n  \"sla\": { \"id\": 1 }\n}"
+            }
+          }
+        },
+        {
           "name": "Обновить категорию",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
             "url": { "raw": "{{baseUrl}}/api/categories/1", "host": ["{{baseUrl}}"], "path": ["api", "categories", "1"] },
             "body": {
               "mode": "raw",
@@ -107,6 +203,7 @@
           "name": "Удалить категорию",
           "request": {
             "method": "DELETE",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": { "raw": "{{baseUrl}}/api/categories/5", "host": ["{{baseUrl}}"], "path": ["api", "categories", "5"] }
           }
         }
@@ -114,19 +211,8 @@
     },
     {
       "name": "Users",
+      "description": "GET — AGENT и ADMIN. POST/PUT/DELETE — только ADMIN.",
       "item": [
-        {
-          "name": "Создать пользователя",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"David Brown\",\n  \"email\": \"david.brown@example.com\"\n}"
-            }
-          }
-        },
         {
           "name": "Получить всех пользователей",
           "request": {
@@ -142,10 +228,28 @@
           }
         },
         {
+          "name": "Создать пользователя",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"David Brown\",\n  \"email\": \"david.brown@example.com\"\n}"
+            }
+          }
+        },
+        {
           "name": "Обновить пользователя",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
             "url": { "raw": "{{baseUrl}}/api/users/1", "host": ["{{baseUrl}}"], "path": ["api", "users", "1"] },
             "body": {
               "mode": "raw",
@@ -157,6 +261,7 @@
           "name": "Удалить пользователя",
           "request": {
             "method": "DELETE",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": { "raw": "{{baseUrl}}/api/users/4", "host": ["{{baseUrl}}"], "path": ["api", "users", "4"] }
           }
         }
@@ -164,19 +269,8 @@
     },
     {
       "name": "Agents",
+      "description": "GET — AGENT и ADMIN. POST/PUT/DELETE — только ADMIN.",
       "item": [
-        {
-          "name": "Создать агента",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/agents", "host": ["{{baseUrl}}"], "path": ["api", "agents"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Kate Morozova\",\n  \"email\": \"kate.morozova@support.com\",\n  \"isActive\": true\n}"
-            }
-          }
-        },
         {
           "name": "Получить всех агентов",
           "request": {
@@ -199,10 +293,28 @@
           }
         },
         {
+          "name": "Создать агента",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/agents", "host": ["{{baseUrl}}"], "path": ["api", "agents"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kate Morozova\",\n  \"email\": \"kate.morozova@support.com\",\n  \"isActive\": true\n}"
+            }
+          }
+        },
+        {
           "name": "Обновить агента",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
             "url": { "raw": "{{baseUrl}}/api/agents/1", "host": ["{{baseUrl}}"], "path": ["api", "agents", "1"] },
             "body": {
               "mode": "raw",
@@ -214,6 +326,7 @@
           "name": "Удалить агента",
           "request": {
             "method": "DELETE",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": { "raw": "{{baseUrl}}/api/agents/4", "host": ["{{baseUrl}}"], "path": ["api", "agents", "4"] }
           }
         }
@@ -221,19 +334,8 @@
     },
     {
       "name": "Tickets",
+      "description": "POST — USER/ADMIN. GET — все авторизованные. PUT — AGENT/ADMIN. DELETE — только ADMIN.",
       "item": [
-        {
-          "name": "Создать тикет",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Email service is down\",\n  \"description\": \"Corporate email stopped working for all users.\",\n  \"user\": { \"id\": 1 },\n  \"category\": { \"id\": 1 }\n}"
-            }
-          }
-        },
         {
           "name": "Получить все тикеты",
           "request": {
@@ -270,10 +372,28 @@
           }
         },
         {
+          "name": "Создать тикет",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Email service is down\",\n  \"description\": \"Corporate email stopped working for all users.\",\n  \"user\": { \"id\": 1 },\n  \"category\": { \"id\": 1 }\n}"
+            }
+          }
+        },
+        {
           "name": "Обновить тикет",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
             "url": { "raw": "{{baseUrl}}/api/tickets/1", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "1"] },
             "body": {
               "mode": "raw",
@@ -285,10 +405,10 @@
           "name": "Назначить агента на тикет",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/4/assign?agentId=2",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "4", "assign"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "4", "assign"],
               "query": [{ "key": "agentId", "value": "2" }]
             }
           }
@@ -297,10 +417,10 @@
           "name": "Изменить статус тикета (OPEN → IN_PROGRESS)",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/4/status?newStatus=IN_PROGRESS",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "4", "status"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "4", "status"],
               "query": [{ "key": "newStatus", "value": "IN_PROGRESS" }]
             }
           }
@@ -309,10 +429,10 @@
           "name": "Изменить статус тикета (IN_PROGRESS → RESOLVED)",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/1/status?newStatus=RESOLVED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "1", "status"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "1", "status"],
               "query": [{ "key": "newStatus", "value": "RESOLVED" }]
             }
           }
@@ -321,10 +441,10 @@
           "name": "Закрыть тикет с решением",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/5/close?solution=Certificate renewed via Let's Encrypt. HTTPS restored.",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "5", "close"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "5", "close"],
               "query": [{ "key": "solution", "value": "Certificate renewed via Let's Encrypt. HTTPS restored." }]
             }
           }
@@ -333,6 +453,7 @@
           "name": "Удалить тикет",
           "request": {
             "method": "DELETE",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": { "raw": "{{baseUrl}}/api/tickets/9", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "9"] }
           }
         }
@@ -345,166 +466,308 @@
           "name": "1. Авто-назначение тикета на наименее загруженного агента",
           "request": {
             "method": "POST",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/4/auto-assign",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "4", "auto-assign"]
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "4", "auto-assign"]
             },
-            "description": "Система находит активного агента с наименьшим числом открытых тикетов и назначает его. Если тикет в статусе OPEN — переводит в IN_PROGRESS.\n\nЗатрагивает: Ticket + Agent. Транзакция."
+            "description": "Роль: AGENT или ADMIN.\nНаходит активного агента с наименьшим числом открытых тикетов и назначает его."
           }
         },
         {
           "name": "2. Эскалация тикета (смена категории + пересчёт SLA)",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/4/escalate?categoryId=1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "4", "escalate"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "4", "escalate"],
               "query": [{ "key": "categoryId", "value": "1" }]
             },
-            "description": "Меняет категорию тикета и автоматически пересчитывает дедлайны ответа и решения по SLA новой категории.\n\nЗатрагивает: Ticket + Category + SLA. Транзакция."
+            "description": "Роль: AGENT или ADMIN."
           }
         },
         {
           "name": "3. Деактивация агента с переназначением тикетов",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/agents/3/deactivate?reassignToAgentId=2",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "agents", "3", "deactivate"],
+              "host": ["{{baseUrl}}"], "path": ["api", "agents", "3", "deactivate"],
               "query": [{ "key": "reassignToAgentId", "value": "2" }]
             },
-            "description": "Деактивирует агента (id=3) и переназначает все его активные тикеты (OPEN/IN_PROGRESS/ON_HOLD/REOPENED) на другого агента (id=2).\n\nЗатрагивает: Agent + Ticket. Транзакция."
+            "description": "Роль: только ADMIN."
           }
         },
         {
-          "name": "4. Статистика по категориям (тикеты + SLA)",
+          "name": "4. Статистика по категориям",
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/reports/categories",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "reports", "categories"]
+              "host": ["{{baseUrl}}"], "path": ["api", "reports", "categories"]
             },
-            "description": "Возвращает по каждой категории: название, параметры SLA (часы ответа/решения), общее число тикетов и разбивку по статусам.\n\nЗатрагивает: Category + Ticket + SLA."
+            "description": "Роль: AGENT или ADMIN."
           }
         },
         {
-          "name": "4b. Нагрузка на агентов (отчёт)",
+          "name": "4b. Нагрузка на агентов",
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/reports/agents",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "reports", "agents"]
+              "host": ["{{baseUrl}}"], "path": ["api", "reports", "agents"]
             },
-            "description": "Возвращает по каждому агенту: число активных, решённых и закрытых тикетов.\n\nЗатрагивает: Agent + Ticket."
+            "description": "Роль: AGENT или ADMIN."
           }
         },
         {
           "name": "5. Повторное открытие закрытого/отменённого тикета",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/8/reopen?assignToAgentId=1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "8", "reopen"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "8", "reopen"],
               "query": [{ "key": "assignToAgentId", "value": "1", "description": "Необязательный параметр" }]
             },
-            "description": "Переводит тикет из статуса CLOSED или CANCELLED обратно в REOPENED. Пересчитывает SLA-дедлайны от текущего момента. Опционально назначает агента.\n\nЗатрагивает: Ticket + Category + SLA + Agent. Транзакция."
+            "description": "Роль: AGENT или ADMIN."
           }
         }
       ]
     },
     {
-      "name": "Полный сценарий",
+      "name": "Проверка доступа по ролям",
+      "description": "Демонстрация матрицы доступа. Меняйте auth на каждом запросе и сверяйте результат.",
       "item": [
         {
-          "name": "Шаг 1 — Создать тикет",
+          "name": "[USER] Создать тикет → 200",
           "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "user1",     "type": "string" },
+                { "key": "password", "value": "User1234!", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test from user1\",\n  \"description\": \"Testing USER role ticket creation.\",\n  \"user\": { \"id\": 1 },\n  \"category\": { \"id\": 1 }\n}"
+            },
+            "description": "Ожидаем 200 — USER может создавать тикеты."
+          }
+        },
+        {
+          "name": "[USER] Удалить тикет → 403",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "user1",     "type": "string" },
+                { "key": "password", "value": "User1234!", "type": "string" }
+              ]
+            },
+            "method": "DELETE",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/tickets/1", "host": ["{{baseUrl}}"], "path": ["api", "tickets", "1"] },
+            "description": "Ожидаем 403 Forbidden — USER не может удалять тикеты."
+          }
+        },
+        {
+          "name": "[USER] Получить агентов → 403",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "user1",     "type": "string" },
+                { "key": "password", "value": "User1234!", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/agents", "host": ["{{baseUrl}}"], "path": ["api", "agents"] },
+            "description": "Ожидаем 403 Forbidden — USER не видит агентов."
+          }
+        },
+        {
+          "name": "[AGENT] Получить агентов → 200",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "agent1",    "type": "string" },
+                { "key": "password", "value": "Agent123!", "type": "string" }
+              ]
+            },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/agents", "host": ["{{baseUrl}}"], "path": ["api", "agents"] },
+            "description": "Ожидаем 200 — AGENT видит список агентов."
+          }
+        },
+        {
+          "name": "[AGENT] Создать агента → 403",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                { "key": "username", "value": "agent1",    "type": "string" },
+                { "key": "password", "value": "Agent123!", "type": "string" }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/agents", "host": ["{{baseUrl}}"], "path": ["api", "agents"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hacker Agent\",\n  \"email\": \"hacker@support.com\"\n}"
+            },
+            "description": "Ожидаем 403 Forbidden — только ADMIN может создавать агентов."
+          }
+        },
+        {
+          "name": "[Без авторизации] Получить тикеты → 401",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
+            "description": "Ожидаем 401 Unauthorized — без логина доступа нет."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Полный сценарий (от регистрации до закрытия)",
+      "description": "Выполняйте шаги по порядку. Переменная username/password в коллекции должна быть admin/Admin123!",
+      "item": [
+        {
+          "name": "0. Зарегистрировать пользователей (если ещё нет)",
+          "request": {
+            "auth": { "type": "noauth" },
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"Admin123!\",\n  \"role\": \"ROLE_ADMIN\"\n}"
+            }
+          }
+        },
+        {
+          "name": "1. Получить CSRF-токен (любой GET)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
+            "description": "После этого запроса переменная xsrf_token заполнится автоматически.",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "const token = pm.cookies.get('XSRF-TOKEN');",
+                    "if (token) {",
+                    "    pm.collectionVariables.set('xsrf_token', token);",
+                    "    console.log('CSRF token saved:', token);",
+                    "}"
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "2. Создать тикет",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }
+            ],
             "url": { "raw": "{{baseUrl}}/api/tickets", "host": ["{{baseUrl}}"], "path": ["api", "tickets"] },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"VPN не подключается\",\n  \"description\": \"Сотрудники не могут подключиться к корпоративному VPN после обновления.\",\n  \"user\": { \"id\": 2 },\n  \"category\": { \"id\": 3 }\n}"
             },
-            "description": "Создаём новый тикет. Запомните id из ответа и замените в следующих шагах."
+            "description": "Запомните id из ответа и замените в шагах 3–7."
           }
         },
         {
-          "name": "Шаг 2 — Авто-назначить на агента",
+          "name": "3. Авто-назначить на агента",
           "request": {
             "method": "POST",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/9/auto-assign",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "9", "auto-assign"]
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "9", "auto-assign"]
             },
-            "description": "Замените 9 на id тикета из шага 1."
+            "description": "Замените 9 на id из шага 2."
           }
         },
         {
-          "name": "Шаг 3 — Эскалировать в категорию Infrastructure",
+          "name": "4. Эскалировать в категорию Infrastructure",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/9/escalate?categoryId=1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "9", "escalate"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "9", "escalate"],
               "query": [{ "key": "categoryId", "value": "1" }]
-            },
-            "description": "Меняем категорию на Infrastructure (Critical SLA). Дедлайны пересчитываются автоматически."
+            }
           }
         },
         {
-          "name": "Шаг 4 — Перевести в RESOLVED",
+          "name": "5. Перевести в RESOLVED",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/9/status?newStatus=RESOLVED",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "9", "status"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "9", "status"],
               "query": [{ "key": "newStatus", "value": "RESOLVED" }]
             }
           }
         },
         {
-          "name": "Шаг 5 — Закрыть с описанием решения",
+          "name": "6. Закрыть с решением",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/9/close?solution=Обновлён VPN-клиент до версии 5.2. Подключение восстановлено.",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "9", "close"],
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "9", "close"],
               "query": [{ "key": "solution", "value": "Обновлён VPN-клиент до версии 5.2. Подключение восстановлено." }]
             }
           }
         },
         {
-          "name": "Шаг 6 — Повторно открыть тикет",
+          "name": "7. Повторно открыть тикет",
           "request": {
             "method": "PUT",
+            "header": [{ "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" }],
             "url": {
               "raw": "{{baseUrl}}/api/tickets/9/reopen",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "tickets", "9", "reopen"]
+              "host": ["{{baseUrl}}"], "path": ["api", "tickets", "9", "reopen"]
             },
-            "description": "Проблема вернулась — открываем снова. SLA-дедлайны пересчитываются от текущего времени."
+            "description": "Проблема вернулась — открываем снова. SLA-дедлайны пересчитываются."
           }
         },
         {
-          "name": "Шаг 7 — Проверить статистику по категориям",
+          "name": "8. Проверить статистику по категориям",
           "request": {
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/api/reports/categories",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "reports", "categories"]
-            },
-            "description": "Видим итоговое распределение тикетов по категориям и статусам."
+              "host": ["{{baseUrl}}"], "path": ["api", "reports", "categories"]
+            }
           }
         }
       ]
